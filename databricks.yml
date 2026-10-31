@@ -32,7 +32,7 @@ resources:
         - job_cluster_key: single_node
           new_cluster:
             spark_version: 17.3.x-scala2.13        # Databricks Runtime 17.3 LTS: Spark 4.0, Python 3.12
-            node_type_id: Standard_D4ds_v5
+            node_type_id: Standard_D4ds_v4
             num_workers: 0
             data_security_mode: SINGLE_USER
             spark_conf:

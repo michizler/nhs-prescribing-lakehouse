@@ -61,7 +61,7 @@ jobs/         Databricks task entry points, one per layer
 tests/        pytest on Spark and Delta, with real NHSBSA rows as fixtures
 scripts/      fetch_sample.py pulls a small sample from the API for development
 databricks.yml  the Databricks Asset Bundle: job, cluster and wheel
-docs/         decisions and the runbook
+docs/         the runbook
 ```
 
 ## Run the tests
@@ -81,14 +81,14 @@ See [docs/runbook.md](docs/runbook.md). In short, `az deployment group create` w
 
 ## Cost
 
-Built for an Azure for Students subscription, so everything that runs is sized and timed to stop. Prices are Azure's UK South list prices in October 2026.
+Built for an Azure for Students subscription, so everything that runs is sized and timed to stop. It deploys to Switzerland North because the subscription's region policy rules out UK South, and this public data has no need to stay in the UK. Prices are Azure's Switzerland North list prices in October 2026.
 
 | Item | Price | Notes |
 |---|---|---|
-| Job cluster, one `Standard_D4ds_v5` node | £0.20 an hour plus Premium jobs compute at £0.23 per DBU hour | Exists only while the job runs |
+| Job cluster, one `Standard_D4ds_v4` node | £0.23 an hour plus Premium jobs compute at £0.23 per DBU hour | Exists only while the job runs |
 | Data Factory copy | £0.19 per DIU hour | About four DIU for minutes per month |
 | Data Factory orchestration | £0.75 per 1,000 activity runs | Pennies a month |
-| ADLS Gen2 hot storage | About £0.014 per GB a month | Raw files move to cool after 30 days |
+| ADLS Gen2 hot storage | About £0.016 per GB a month | Raw files move to cool after 30 days |
 
 A budget with alerts at 50%, 80% and a forecast 100% is part of the deployment.
 

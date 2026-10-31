@@ -1,0 +1,94 @@
+# Runbook
+
+How to deploy the lakehouse, run it, check it and switch it off. Commands are for PowerShell with the Azure CLI and the Databricks CLI installed.
+
+## Before the first deploy
+
+1. Sign in with `az login` and pick the subscription with `az account set --subscription <id>`.
+2. Check the vCPU quota in the region. The job cluster needs four cores of the Ddsv4 family.
+
+   ```
+   az vm list-usage --location switzerlandnorth --query "[?contains(name.value, 'DDSv4') || name.value=='cores']" -o table
+   ```
+
+3. Register the two resource providers a new subscription won't have yet. Each takes a minute or two.
+
+   ```
+   az provider register -n Microsoft.Databricks --wait
+   az provider register -n Microsoft.DataFactory --wait
+   ```
+
+4. Create a resource group. Everything lives in it, so deleting it removes everything.
+
+   ```
+   az group create -n rg-epd-lakehouse -l switzerlandnorth
+   ```
+
+## Deploy
+
+**1. Infrastructure.** The first deploy has no job ID yet, which is fine.
+
+```
+$env:BUDGET_EMAIL = "you@example.com"
+az deployment group create -g rg-epd-lakehouse -f infra/main.bicep -p infra/main.bicepparam --query properties.outputs
+```
+
+Keep the outputs. `storageAccount`, `databricksUrl` and `accessConnectorId` are needed below.
+
+**2. Unity Catalog storage.** In the Databricks workspace, under Catalog, then External data, do three things.
+
+- Create a storage credential from the access connector ID.
+- Create an external location for `abfss://lake@<storageAccount>.dfs.core.windows.net/` and one for `abfss://raw@<storageAccount>.dfs.core.windows.net/`, both using that credential.
+- Create the catalog with its managed location in the lake.
+
+  ```sql
+  CREATE CATALOG IF NOT EXISTS epd MANAGED LOCATION 'abfss://lake@<storageAccount>.dfs.core.windows.net/epd';
+  ```
+
+**3. The Databricks job.**
+
+```
+databricks auth login --host <databricksUrl>
+databricks bundle deploy --var="storage_account=<storageAccount>"
+databricks bundle summary
+```
+
+Note the job ID from the summary.
+
+**4. Connect Data Factory to the job.** Redeploy the infrastructure with the job ID. Nothing else changes.
+
+```
+$env:DATABRICKS_JOB_ID = "<job id>"
+az deployment group create -g rg-epd-lakehouse -f infra/main.bicep -p infra/main.bicepparam
+```
+
+## Run
+
+**A backfill.** In Data Factory, trigger `PL_INGEST_EPD` with `windowStart` and `windowEnd` set to the first and last month, for example `202407` and `202506`. It lands only months that aren't already in raw, then runs the job and waits for it.
+
+**Reprocess months** without landing anything, for example after a rule change.
+
+```
+databricks bundle run epd_lakehouse --params months=202505,202506
+```
+
+**Monthly schedule.** The trigger `TR_MONTHLY` is created stopped. Start it when you want new months loaded automatically, on the 20th of each month.
+
+```
+az datafactory trigger start -g rg-epd-lakehouse --factory-name <dataFactoryName> -n TR_MONTHLY
+```
+
+## Check
+
+- `epd.ops.reconciliation` has one row per month and check. Every row in a run should have `passed = true`, or the job will have failed.
+- `epd.silver.quarantine` holds rejected rows with `_dq_errors` naming the rules they broke.
+- The silver task prints a count per broken rule for each run.
+
+## Costs and switching off
+
+- The job cluster exists only while the job runs. Nothing runs between loads unless the trigger is started.
+- Stop the schedule with `az datafactory trigger stop`.
+- Delete everything with `az group delete -n rg-epd-lakehouse`. The Databricks managed resource group goes with the workspace.
+- Power BI needs a Databricks SQL warehouse, which bills while it runs. Use the smallest size with auto-stop after 10 minutes, or export `mart_icb_chapter_month` and report from the file.
+
+

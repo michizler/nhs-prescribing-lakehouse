@@ -3,10 +3,12 @@
 param storageName string
 param workspaceName string
 param factoryPrincipalId string
+param accessConnectorName string
 param accessConnectorPrincipalId string
 
 var blobDataContributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')
 var contributor = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')
+var reader = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')
 
 resource account 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
   name: storageName
@@ -14,6 +16,10 @@ resource account 'Microsoft.Storage/storageAccounts@2023-05-01' existing = {
 
 resource workspace 'Microsoft.Databricks/workspaces@2024-05-01' existing = {
   name: workspaceName
+}
+
+resource connector 'Microsoft.Databricks/accessConnectors@2024-05-01' existing = {
+  name: accessConnectorName
 }
 
 resource factoryOnStorage 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
@@ -26,6 +32,13 @@ resource connectorOnStorage 'Microsoft.Authorization/roleAssignments@2022-04-01'
   name: guid(account.id, accessConnectorPrincipalId, blobDataContributor)
   scope: account
   properties: { principalId: accessConnectorPrincipalId, principalType: 'ServicePrincipal', roleDefinitionId: blobDataContributor }
+}
+
+// Unity Catalog won't register a storage credential unless the connector's identity can read the connector itself.
+resource connectorOnItself 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(connector.id, accessConnectorPrincipalId, reader)
+  scope: connector
+  properties: { principalId: accessConnectorPrincipalId, principalType: 'ServicePrincipal', roleDefinitionId: reader }
 }
 
 // Contributor on the workspace lets Data Factory's managed identity call the Jobs API, the pattern Microsoft
