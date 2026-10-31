@@ -4,7 +4,7 @@ A production-style Azure lakehouse for the **English Prescribing Dataset**, ever
 
 Data Factory lands each new month, Databricks moves it through bronze, silver and gold Delta tables, and every load is reconciled against totals computed by the publisher's own API before it counts as done.
 
-> **Status.** Deployed to Azure. June 2025 has run from the publisher's file through to gold and reconciled exactly: 18,028,356 rows, 103,590,213 items and £862,338,253.30, with no rows quarantined. Landing took about 3 minutes and the Databricks job about 29.
+> **Status.** Deployed to Azure. Twelve months, July 2024 to June 2025, have run from the publisher's files through to gold, and each one reconciles exactly. That is 216,230,578 rows, 1,254,528,279 items and £10,347,167,629.82, with no rows quarantined and every fact row's practice key present in the dimension. One month takes about 3 minutes to land and about 29 in the Databricks job. The Power BI report isn't built yet.
 
 ## Architecture
 
