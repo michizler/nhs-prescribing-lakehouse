@@ -1,0 +1,32 @@
+# Package and tool settings for the NHS prescribing lakehouse. The same package is built as a wheel for Databricks.
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "epd-lakehouse"
+version = "0.1.0"
+description = "Bronze, silver and gold transformations for the NHS English Prescribing Dataset"
+requires-python = ">=3.12"
+dependencies = ["requests>=2.32"]   # pyspark is provided by the Databricks runtime
+
+[project.optional-dependencies]
+dev = ["pyspark==4.0.1", "delta-spark==4.0.0", "pytest==8.3.5", "ruff==0.11.8", "requests==2.32.3"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 130
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["epd_lakehouse"]

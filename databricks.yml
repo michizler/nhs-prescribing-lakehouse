@@ -1,0 +1,96 @@
+# Databricks Asset Bundle: the job, its cluster and its code, deployed with `databricks bundle deploy`.
+# The package is built as a wheel and installed on the job cluster, so jobs and tests run the same code.
+bundle:
+  name: epd-lakehouse
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds the bronze, silver, gold and ops schemas
+    default: epd
+  storage_account:
+    description: Storage account name from the infra deployment output `storageAccount`
+
+artifacts:
+  epd_lakehouse:
+    type: whl
+    path: .
+    build: python -m pip wheel . --no-deps --wheel-dir dist
+
+resources:
+  jobs:
+    epd_lakehouse:
+      name: epd-lakehouse
+      description: Bronze to gold for the English Prescribing Dataset, then reconciliation against NHSBSA totals.
+      max_concurrent_runs: 1            # two runs writing the same months would race
+      timeout_seconds: 14400
+      email_notifications:
+        on_failure: ["${workspace.current_user.userName}"]
+
+      # One small node, created for the run and destroyed after it. Single node suits this volume, about 18
+      # million rows a month, and costs a fraction of an always-on cluster.
+      job_clusters:
+        - job_cluster_key: single_node
+          new_cluster:
+            spark_version: 17.3.x-scala2.13        # Databricks Runtime 17.3 LTS: Spark 4.0, Python 3.12
+            node_type_id: Standard_D4ds_v5
+            num_workers: 0
+            data_security_mode: SINGLE_USER
+            spark_conf:
+              spark.master: "local[*, 4]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags:
+              ResourceClass: SingleNode
+              project: epd-lakehouse
+            azure_attributes:
+              availability: ON_DEMAND_AZURE
+
+      parameters:
+        - name: months
+          default: ""                   # empty: process whatever is new. "202505,202506": reprocess those months.
+
+      tasks:
+        - task_key: bronze
+          job_cluster_key: single_node
+          libraries: [{whl: ./dist/*.whl}]
+          spark_python_task:
+            python_file: ./jobs/bronze_ingest.py
+            parameters: [--catalog, "${var.catalog}",
+                         --raw-path, "abfss://raw@${var.storage_account}.dfs.core.windows.net/epd",
+                         --checkpoint-path, "abfss://lake@${var.storage_account}.dfs.core.windows.net/_checkpoints"]
+
+        - task_key: silver
+          depends_on: [{task_key: bronze}]
+          job_cluster_key: single_node
+          libraries: [{whl: ./dist/*.whl}]
+          spark_python_task:
+            python_file: ./jobs/silver_build.py
+            parameters: [--catalog, "${var.catalog}",
+                         --raw-path, "abfss://raw@${var.storage_account}.dfs.core.windows.net/epd",
+                         --checkpoint-path, "abfss://lake@${var.storage_account}.dfs.core.windows.net/_checkpoints",
+                         --months, "{{job.parameters.months}}"]
+
+        - task_key: gold
+          depends_on: [{task_key: silver}]
+          job_cluster_key: single_node
+          libraries: [{whl: ./dist/*.whl}]
+          spark_python_task:
+            python_file: ./jobs/gold_build.py
+            parameters: [--catalog, "${var.catalog}",
+                         --raw-path, "abfss://raw@${var.storage_account}.dfs.core.windows.net/epd",
+                         --checkpoint-path, "abfss://lake@${var.storage_account}.dfs.core.windows.net/_checkpoints",
+                         --months, "{{job.parameters.months}}"]
+
+        - task_key: reconcile
+          depends_on: [{task_key: gold}]
+          job_cluster_key: single_node
+          libraries: [{whl: ./dist/*.whl}]
+          spark_python_task:
+            python_file: ./jobs/reconcile_months.py
+            parameters: [--catalog, "${var.catalog}",
+                         --raw-path, "abfss://raw@${var.storage_account}.dfs.core.windows.net/epd",
+                         --checkpoint-path, "abfss://lake@${var.storage_account}.dfs.core.windows.net/_checkpoints"]
+
+targets:
+  dev:
+    mode: development       # resources are prefixed with your name and schedules are paused
+    default: true

@@ -1,0 +1,9 @@
+# Linux test runner matching Databricks Runtime 17.3 LTS (Spark 4.0, Python 3.12). Local Windows Spark can't run
+# Python workers reliably, and this is the same environment CI uses.
+FROM python:3.12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends default-jre-headless procps && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY pyproject.toml ./
+RUN pip install --no-cache-dir "pyspark==4.0.1" "delta-spark==4.0.0" "pytest==8.3.5" "ruff==0.11.8" "requests==2.32.3"
+COPY . .
+CMD ["sh", "-c", "ruff check src tests scripts jobs && pytest"]

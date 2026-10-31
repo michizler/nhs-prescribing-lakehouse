@@ -1,0 +1,38 @@
+# Checks every push and pull request: lint, the Spark and Delta test suite, and the Bicep templates.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: python -m pip install -e ".[dev]"
+      - run: ruff check src tests scripts jobs
+      - run: pytest
+
+  infra:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: az bicep install
+      - run: az bicep build --file infra/main.bicep --stdout > /dev/null
+      - run: az bicep lint --file infra/main.bicep
+      - run: az bicep build-params --file infra/main.bicepparam --stdout > /dev/null
+        env:
+          BUDGET_EMAIL: ci@example.com
