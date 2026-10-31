@@ -37,7 +37,7 @@ Keep the outputs. `storageAccount`, `databricksUrl` and `accessConnectorId` are 
 
 **2. Unity Catalog storage.** In the Databricks workspace, under Catalog, then External data, do three things.
 
-- Create a storage credential from the access connector ID.
+- Create a storage credential from the access connector ID. Choose Storage credential, not Service credential, and do this in the workspace rather than through the REST API, which refuses it with a permissions error.
 - Create an external location for `abfss://lake@<storageAccount>.dfs.core.windows.net/` and one for `abfss://raw@<storageAccount>.dfs.core.windows.net/`, both using that credential.
 - Create the catalog with its managed location in the lake.
 

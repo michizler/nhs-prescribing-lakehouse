@@ -50,7 +50,7 @@ def conform(bronze: DataFrame) -> DataFrame:
     truncated = F.greatest(*[F.coalesce(F.length(c), F.lit(0)) for c in NAME_COLUMNS]) >= NAME_LIMIT
     return (df.withColumn("period_start", period)
             # The BNF code nests its own hierarchy: chapter (2), section (4), paragraph (6), chemical (9),
-            # product (11) and presentation (15 characters).
+            # product (11) and presentation (15 characters). Appliances in chapters 20 to 23 stop at 11.
             .withColumn("bnf_section_code", F.substring("bnf_code", 1, 4))
             .withColumn("bnf_paragraph_code", F.substring("bnf_code", 1, 6))
             .withColumn("bnf_product_code", F.substring("bnf_code", 1, 11))

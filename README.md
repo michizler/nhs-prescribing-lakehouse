@@ -35,6 +35,7 @@ Every design decision below came from measuring the live data first, using June 
 - **18,028,356 rows**, 9,249 prescribers, 21,430 products, 43 ICBs, 103.6 million items, £862.3 million.
 - **The grain is not practice and product.** In Bolton, 118,777 lines cover only 64,067 practice and product pairs, because the same medicine appears once for each pack size. A line is unique on month, commissioner, practice, product and quantity per item.
 - **26 lines repeat that grain nationally, all from a placeholder prescriber**, code `-`, "UNIDENTIFIED DOCTORS". They are kept, so totals still reconcile, mapped to an "unknown" practice, and summed to the grain in gold.
+- **BNF codes are not all 15 characters.** The 1.8 million lines for appliances, dressings and stoma products, chapters 20 to 23, use 11-character codes. That is 10% of rows and £125 million. A small sample of one area missed this, so a run through a real slice of the published file caught it before the first load.
 - **Every name field is cut at 40 characters**, so "NHS LANCASHIRE AND SOUTH CUMBRIA INTEGRA" is how one ICB is published. Silver flags these rows rather than guessing the rest.
 - **17,854 lines are flagged unidentified**, and their prescribers have no address.
 
@@ -73,7 +74,7 @@ docker build -f Dockerfile.test -t epd-tests .
 docker run --rm epd-tests
 ```
 
-20 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
+21 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
 
 ## Deploy
 
