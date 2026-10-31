@@ -17,8 +17,10 @@ for df, name in [(practices, "dim_practice"), (bnf, "dim_bnf"), (icbs, "dim_icb"
     df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(table(c, "gold", name))
 
 fact_name = table(c, "gold", "fact_prescribing")
-todo = ({int(m) for m in a.months.split(",")} if a.months
-        else months_in(spark, table(c, "silver", "prescribing")) - months_in(spark, fact_name))
+written = months_in(spark, fact_name)
+new = ({int(m) for m in a.months.split(",")} if a.months
+       else months_in(spark, table(c, "silver", "prescribing")) - written)
+todo = gold.months_to_write(new, written)
 if todo:
     practices = spark.table(table(c, "gold", "dim_practice"))
     fact = gold.fact_prescribing(s.filter(F.col("year_month").isin(sorted(todo))), practices)

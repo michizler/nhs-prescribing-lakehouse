@@ -46,6 +46,19 @@ def dim_period(silver: DataFrame) -> DataFrame:
                                                             F.substring((F.col("financial_year") + 1).cast("string"), 3, 2))))
 
 
+def months_to_write(new: set[int], existing: set[int]) -> set[int]:
+    """The fact months a load must write. A month older than the newest one in the fact can move a practice's
+    `valid_from`, and so its key, which leaves months already written pointing at keys that no longer exist. Those
+    loads rewrite every month. A load of newer months only moves no key, so it writes just those months."""
+    return new | existing if new and existing and min(new) < max(existing) else new
+
+
+def orphaned_keys(fact: DataFrame, practices: DataFrame) -> DataFrame:
+    """Count of fact rows per month whose practice key isn't in the dimension. Totals can't show this."""
+    keys = practices.select(F.col("sk").alias("practice_sk"))
+    return fact.join(keys, "practice_sk", "left_anti").groupBy("year_month").count()
+
+
 def fact_prescribing(silver: DataFrame, practices: DataFrame) -> DataFrame:
     """Fact rows at the published grain, keyed to the practice version valid in that month.
 

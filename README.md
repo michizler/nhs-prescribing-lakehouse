@@ -47,9 +47,9 @@ Every design decision below came from measuring the live data first, using June 
 
 **Silver.** Types every column with `try_cast`, because Spark 4 runs in ANSI mode and a plain cast of a bad value stops the job. Money is `DECIMAL(18,5)`, never float. The BNF code is split into its own hierarchy, from chapter to presentation. Eleven rules decide each row's fate. Error rules send it to quarantine with the reasons, and warning rules keep it and record the issue on the row.
 
-**Gold.** The practice dimension is rebuilt from the full silver history on every run with the gaps-and-islands pattern, which gives the same versions and the same surrogate keys every time, so a rerun or a corrected month can't leave it half-updated. The fact joins each line to the practice version that was valid in its month.
+**Gold.** The practice dimension is rebuilt from the full silver history on every run with the gaps-and-islands pattern, which gives the same versions and the same surrogate keys every time, so a rerun or a corrected month can't leave it half-updated. The fact joins each line to the practice version that was valid in its month. Keys come from each version's start month, so loading a month older than those already in gold moves them, and that load rewrites every month of the fact. Newer months rewrite nothing else.
 
-**Reconciliation.** For every month, bronze row count and gold items and cost are compared with the publisher's own totals. Rows and items must match exactly and cost to the penny. Results go to `ops.reconciliation`, and any mismatch fails the job.
+**Reconciliation.** For every month, bronze row count and gold items and cost are compared with the publisher's own totals. Rows and items must match exactly and cost to the penny. Totals can't see a broken join, so every fact row's practice key must also exist in the dimension. Results go to `ops.reconciliation`, and any mismatch fails the job.
 
 **Idempotent by month.** Every write replaces exactly the months it was given, using Delta's `replaceWhere`, and Delta refuses a batch that strays outside them. Running a month twice gives the same tables as running it once. Tests prove both.
 
@@ -74,7 +74,7 @@ docker build -f Dockerfile.test -t epd-tests .
 docker run --rm epd-tests
 ```
 
-22 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
+24 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
 
 ## Deploy
 

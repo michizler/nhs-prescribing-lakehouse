@@ -15,7 +15,8 @@ def from_snapshots(snapshots: DataFrame, key: str, attrs: list[str], period: str
 
     Returns `key`, the attrs, `valid_from`, `valid_to` (exclusive, NULL for the current version), `first_seen`,
     `last_seen`, `is_current` and a surrogate key `sk` that depends only on (key, valid_from), so it is the same on
-    every rebuild.
+    every rebuild of the same months. Adding a month before the existing ones moves `valid_from`, and so `sk`, which
+    is why `gold.months_to_write` rewrites the whole fact for such a load.
 
     This is the gaps-and-islands pattern. A version starts wherever the attribute hash differs from the previous
     snapshot's, and a running sum of those starts numbers the versions.

@@ -52,6 +52,23 @@ def test_fact_joins_the_practice_version_valid_that_month(spark):
     assert names == {202504: "OLD NAME", 202505: "NEW NAME", 202506: "NEW NAME"}
 
 
+def test_loading_an_earlier_month_moves_keys_so_every_month_is_rewritten(spark):
+    june, may = _row(202506, "00T00", "P1", "A", "28", 1, "1"), _row(202505, "00T00", "P1", "A", "28", 1, "1")
+    first = _silver(spark, [june])
+    old_fact = gold.fact_prescribing(first, gold.dim_practice(first))
+    both = _silver(spark, [may, june])
+    practices = gold.dim_practice(both)
+    assert gold.orphaned_keys(old_fact, practices).collect()[0]["year_month"] == 202506
+    assert gold.months_to_write({202505}, {202506}) == {202505, 202506}
+    assert gold.orphaned_keys(gold.fact_prescribing(both, practices), practices).count() == 0
+
+
+def test_newer_months_leave_written_months_alone():
+    assert gold.months_to_write({202507}, {202505, 202506}) == {202507}
+    assert gold.months_to_write({202505}, set()) == {202505}
+    assert gold.months_to_write(set(), {202505, 202506}) == set()
+
+
 def test_period_dimension_uses_the_nhs_financial_year(spark):
     s = _silver(spark, [_row(202503, "00T00", "P1", "A", "1", 1, "1"), _row(202504, "00T00", "P1", "A", "1", 1, "1")])
     labels = {r.year_month: r.financial_year_label for r in gold.dim_period(s).collect()}
