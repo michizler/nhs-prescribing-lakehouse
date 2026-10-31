@@ -1,0 +1,138 @@
+/// Monthly items and cost by ICB and BNF chapter, from gold.mart_icb_chapter_month. All report measures on prescribing live here.
+table Prescribing
+	lineageTag: 62f9bead-d362-5353-bfac-d11671362c26
+
+	/// Sum of NHSBSA ACTUAL_COST. Stored as double, because fixed decimal keeps four places and the source has five.
+	measure 'Actual cost' = SUM(Prescribing[actual_cost])
+		formatString: "£"#,##0
+		lineageTag: c70e9ec9-c27c-5276-abcb-c88adbd94683
+
+	/// Prescription items dispensed.
+	measure Items = SUM(Prescribing[item_count])
+		formatString: #,##0
+		lineageTag: 7ed3aec9-2b57-5417-97cf-b0412dbe97e1
+
+	/// Actual cost divided by items.
+	measure 'Cost per item' = DIVIDE([Actual cost], [Items])
+		formatString: "£"0.00
+		lineageTag: 0d55b2ff-d5f7-5005-b261-c267325dcc3d
+
+	/// What this selection would cost at England's average cost per item in each chapter. Removes the effect of chapter mix. Sums to actual cost for England.
+	measure 'Expected cost' = SUMX(VALUES(Chapter[bnf_chapter_code]), [Items] * CALCULATE([Cost per item], ALL(ICB)))
+		formatString: "£"#,##0
+		lineageTag: 0adf268d-60f2-5841-95d5-93f0d1e8ba56
+
+	/// How far actual cost sits above or below expected cost.
+	measure 'Cost vs expected' = DIVIDE([Actual cost], [Expected cost]) - 1
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 1c1590c0-b1cd-56b0-b8df-99a20e964aac
+
+	/// Cost vs expected for the ten ICBs furthest above expected.
+	measure 'Highest against expected' = IF(RANKX(ALLSELECTED(ICB[ICB]), [Cost vs expected], , DESC) <= 10, [Cost vs expected])
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: 9cbc565c-b458-5e94-b786-97c4edc79387
+
+	/// Cost vs expected for the ten ICBs furthest below expected.
+	measure 'Lowest against expected' = IF(RANKX(ALLSELECTED(ICB[ICB]), [Cost vs expected], , ASC) <= 10, [Cost vs expected])
+		formatString: +0.0%;-0.0%;0.0%
+		lineageTag: d7fd9506-0793-581b-a415-2dcdf393f37b
+
+	/// Actual cost minus expected cost, in pounds.
+	measure 'Cost above expected' = [Actual cost] - [Expected cost]
+		formatString: "£"#,##0;-"£"#,##0;"£"0
+		lineageTag: ca3d3f68-8d67-5c0b-b337-afaecfc3ec68
+
+	/// Orange above expected, blue below. Used to colour the ICB charts.
+	measure 'Expected colour' = IF([Cost vs expected] >= 0, "#ED8B00", "#005EB8")
+		isHidden
+		lineageTag: 954dbfd8-1cef-5ba8-874e-b952375331d9
+
+	/// Calendar days in the months selected.
+	measure 'Days in period' = SUMX(Period, DAY(EOMONTH(Period[period_start], 0)))
+		formatString: 0
+		isHidden
+		lineageTag: b578b55b-3f7f-5f49-a854-3e892db754c4
+
+	/// Actual cost per calendar day, so months of different lengths compare fairly.
+	measure 'Cost per day' = DIVIDE([Actual cost], [Days in period])
+		formatString: "£"#,##0
+		lineageTag: 397a25e0-013a-55a4-90b4-8498d51e5f94
+
+	/// Cost per day in this month against the same selection across all selected months.
+	measure 'Against own average' = ROUND(DIVIDE([Cost per day], CALCULATE([Cost per day], ALLSELECTED(Period))) - 1, 2)
+		formatString: +0%;-0%;0%
+		lineageTag: bdd8b4e9-1926-5629-bf1c-36d28412a52c
+
+	/// The chapter with the highest cost in the current selection, with its share.
+	measure 'Largest chapter' = VAR grand = [Actual cost] VAR best = TOPN(1, ADDCOLUMNS(VALUES(Chapter[Chapter]), "cost", [Actual cost]), [cost], DESC) RETURN MAXX(best, Chapter[Chapter] & " (" & FORMAT(DIVIDE([cost], grand), "0%") & ")")
+		lineageTag: 31b18fa2-faea-53f9-8716-e3cf42926ebd
+
+	/// First and last month in the current selection.
+	measure 'Period covered' = FORMAT(MIN(Period[period_start]), "mmmm yyyy") & " to " & FORMAT(MAX(Period[period_start]), "mmmm yyyy")
+		lineageTag: 03333172-074a-5d8a-9042-1ed2d39a9140
+
+	/// Months with data in the current selection.
+	measure 'Months loaded' = DISTINCTCOUNT(Prescribing[year_month])
+		formatString: 0
+		lineageTag: 2bdfaca1-a637-57c1-8f7f-d46b464e1b23
+
+	/// Items in this report minus the publisher's items for the same months. Should be zero.
+	measure 'Items gap' = [Items] - [Published items]
+		formatString: #,##0
+		lineageTag: 6892f0e4-f943-596e-a425-addefdb75f5d
+
+	/// Cost in this report minus the publisher's cost, to the penny. Should be zero.
+	measure 'Cost gap' = ROUND([Actual cost] - [Published cost], 2)
+		formatString: "£"#,##0.00
+		lineageTag: cc3c3f1a-72a1-5bd4-b4da-86e49818ea96
+
+	column year_month
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: de9df617-e9e1-5ea2-a833-f869f1498809
+		summarizeBy: none
+		sourceColumn: year_month
+
+	column icb_code
+		dataType: string
+		isHidden
+		lineageTag: 9367e7ab-2445-55f2-acb6-d2266b04171f
+		summarizeBy: none
+		sourceColumn: icb_code
+
+	column bnf_chapter_code
+		dataType: string
+		isHidden
+		lineageTag: a77ff7a1-f7f2-5d36-8236-8d7e469d388b
+		summarizeBy: none
+		sourceColumn: bnf_chapter_code
+
+	column item_count
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 082a5a11-e9e4-5296-907b-8c6a88bfc69f
+		summarizeBy: none
+		sourceColumn: items
+
+	column actual_cost
+		dataType: double
+		isHidden
+		lineageTag: d0f55d8b-a629-5a00-82d8-f01e0ce4b1b2
+		summarizeBy: none
+		sourceColumn: actual_cost
+
+	partition Prescribing = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs(DatabricksHost, WarehousePath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]),
+				    Catalog = Source{[Name="epd",Kind="Database"]}[Data],
+				    Schema = Catalog{[Name="gold",Kind="Schema"]}[Data],
+				    Data = Schema{[Name="mart_icb_chapter_month",Kind="Table"]}[Data],
+				    Kept = Table.SelectColumns(Data, {"year_month", "icb_code", "bnf_chapter_code", "items", "actual_cost"}),
+				    Typed = Table.TransformColumnTypes(Kept, {{"actual_cost", type number}})
+				in
+				    Typed
+

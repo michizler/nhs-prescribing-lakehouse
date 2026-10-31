@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "epd-prescribing"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "22e9103c-db5c-5647-9a9c-6794394ee12e"
+  }
+}

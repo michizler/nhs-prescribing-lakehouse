@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "SemanticModel",
+    "displayName": "epd-prescribing"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "1e43fcc0-618f-56dd-85db-cb5689e9ea9e"
+  }
+}

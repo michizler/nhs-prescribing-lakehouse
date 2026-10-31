@@ -90,11 +90,24 @@ az datafactory trigger start -g rg-epd-lakehouse --factory-name <dataFactoryName
 - `epd.silver.quarantine` holds rejected rows with `_dq_errors` naming the rules they broke.
 - The silver task prints a count per broken rule for each run.
 
+## Report
+
+The report is a Power BI Project in `powerbi/`, so the model and every page are text files in Git. It imports `mart_icb_chapter_month`, `dim_icb`, `dim_period` and `ops.reconciliation`, so the warehouse runs only during a refresh and not on every click.
+
+1. Open `powerbi/epd-prescribing.pbip` in Power BI Desktop.
+2. If the workspace or warehouse has changed, go to Transform data, then Edit parameters, and set `DatabricksHost` and `WarehousePath`.
+3. Choose Refresh. The first time, sign in to Azure Databricks with your Microsoft account.
+4. Open the Data checks page. Every check should pass, and both gaps should be zero.
+
+The imported data lives in `.pbi/cache.abf`, which Git ignores, so a fresh clone opens with empty visuals until it is refreshed.
+
+NHSBSA cuts ICB names at 40 characters, so the ICB table's query maps each published name to its full name. A new or renamed ICB falls back to the published wording, so add it to that map.
+
 ## Costs and switching off
 
 - The job cluster exists only while the job runs. Nothing runs between loads unless the trigger is started.
 - Stop the schedule with `az datafactory trigger stop`.
 - Delete everything with `az group delete -n rg-epd-lakehouse`. The Databricks managed resource group goes with the workspace.
-- Power BI needs a Databricks SQL warehouse, which bills while it runs. Use the smallest size with auto-stop after 10 minutes, or export `mart_icb_chapter_month` and report from the file.
+- A report refresh needs a Databricks SQL warehouse, which bills while it runs. Use the smallest size with auto-stop after 10 minutes.
 
 

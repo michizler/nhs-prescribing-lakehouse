@@ -1,0 +1,29 @@
+/// BNF chapters found in the mart. A repeated code fails the refresh, which is the right outcome.
+table Chapter
+	lineageTag: d6ac8691-c826-5a2d-8a97-88d88bf231ed
+
+	column bnf_chapter_code
+		dataType: string
+		isHidden
+		lineageTag: 4e9806c1-bf75-5f21-bdb2-1e51da2f95bf
+		summarizeBy: none
+		sourceColumn: bnf_chapter_code
+
+	column Chapter
+		dataType: string
+		lineageTag: 00669639-3d7c-554a-9569-be0550f4b42d
+		summarizeBy: none
+		sourceColumn: bnf_chapter_name
+
+	partition Chapter = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs(DatabricksHost, WarehousePath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]),
+				    Catalog = Source{[Name="epd",Kind="Database"]}[Data],
+				    Schema = Catalog{[Name="gold",Kind="Schema"]}[Data],
+				    Data = Schema{[Name="mart_icb_chapter_month",Kind="Table"]}[Data],
+				    Kept = Table.Distinct(Table.SelectColumns(Data, {"bnf_chapter_code", "bnf_chapter_name"}))
+				in
+				    Kept
+

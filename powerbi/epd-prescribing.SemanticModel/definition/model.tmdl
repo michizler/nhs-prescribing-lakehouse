@@ -1,0 +1,21 @@
+model Model
+	culture: en-GB
+	defaultPowerBIDataSourceVersion: powerBI_V3
+	discourageImplicitMeasures
+	sourceQueryCulture: en-GB
+	dataAccessOptions
+		legacyRedirects
+		returnErrorValuesAsNull
+
+annotation __PBI_TimeIntelligenceEnabled = 0
+
+annotation PBI_QueryOrder = ["DatabricksHost","WarehousePath","Prescribing","ICB","Chapter","Period","Reconciliation"]
+
+annotation PBI_ProTooling = ["DevMode"]
+
+ref table Prescribing
+ref table ICB
+ref table Chapter
+ref table Period
+ref table Reconciliation
+

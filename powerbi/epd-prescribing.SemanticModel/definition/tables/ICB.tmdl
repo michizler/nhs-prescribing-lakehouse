@@ -1,0 +1,38 @@
+/// Integrated care boards, from gold.dim_icb. The source cuts names at 40 characters, so full short names are mapped here for display, falling back to the published name.
+table ICB
+	lineageTag: 9aa401a7-28d8-581d-9e06-12b5721f076c
+
+	column icb_code
+		dataType: string
+		isHidden
+		lineageTag: cf84cae0-f5e6-5c11-965f-d5dde2826a66
+		summarizeBy: none
+		sourceColumn: icb_code
+
+	column ICB
+		dataType: string
+		lineageTag: b52ccd1e-b774-574e-bda0-3c9d79587fcc
+		summarizeBy: none
+		sourceColumn: icb_short
+
+	column Region
+		dataType: string
+		lineageTag: 6fc5924e-1cd7-52a6-91a9-e05a49f9d3d3
+		summarizeBy: none
+		sourceColumn: region_label
+
+	partition ICB = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs(DatabricksHost, WarehousePath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]),
+				    Catalog = Source{[Name="epd",Kind="Database"]}[Data],
+				    Schema = Catalog{[Name="gold",Kind="Schema"]}[Data],
+				    Data = Schema{[Name="dim_icb",Kind="Table"]}[Data],
+				    Kept = Table.SelectColumns(Data, {"icb_code", "icb_name", "regional_office_name"}),
+				    Names = [#"NHS NORTH EAST AND NORTH CUMBRIA INTEGRA" = "North East and North Cumbria", #"NHS GREATER MANCHESTER INTEGRATED CARE B" = "Greater Manchester", #"NHS CHESHIRE AND MERSEYSIDE INTEGRATED C" = "Cheshire and Merseyside", #"NHS WEST YORKSHIRE INTEGRATED CARE BOARD" = "West Yorkshire", #"NHS HUMBER AND NORTH YORKSHIRE INTEGRATE" = "Humber and North Yorkshire", #"NHS HAMPSHIRE AND ISLE OF WIGHT INTEGRAT" = "Hampshire and Isle of Wight", #"NHS LANCASHIRE AND SOUTH CUMBRIA INTEGRA" = "Lancashire and South Cumbria", #"NHS SUSSEX INTEGRATED CARE BOARD" = "Sussex", #"NHS KENT AND MEDWAY INTEGRATED CARE BOAR" = "Kent and Medway", #"NHS NORTH WEST LONDON INTEGRATED CARE BO" = "North West London", #"NHS NORTH EAST LONDON INTEGRATED CARE BO" = "North East London", #"NHS BUCKINGHAMSHIRE, OXFORDSHIRE AND BER" = "Buckinghamshire, Oxfordshire and Berkshire West", #"NHS SOUTH YORKSHIRE INTEGRATED CARE BOAR" = "South Yorkshire", #"NHS BIRMINGHAM AND SOLIHULL INTEGRATED C" = "Birmingham and Solihull", #"NHS BLACK COUNTRY INTEGRATED CARE BOARD" = "Black Country", #"NHS SOUTH EAST LONDON INTEGRATED CARE BO" = "South East London", #"NHS HERTFORDSHIRE AND WEST ESSEX INTEGRA" = "Hertfordshire and West Essex", #"NHS STAFFORDSHIRE AND STOKE-ON-TRENT INT" = "Staffordshire and Stoke-on-Trent", #"NHS DEVON INTEGRATED CARE BOARD" = "Devon", #"NHS NORTH CENTRAL LONDON INTEGRATED CARE" = "North Central London", #"NHS MID AND SOUTH ESSEX INTEGRATED CARE" = "Mid and South Essex", #"NHS LEICESTER, LEICESTERSHIRE AND RUTLAN" = "Leicester, Leicestershire and Rutland", #"NHS NORFOLK AND WAVENEY INTEGRATED CARE" = "Norfolk and Waveney", #"NHS SOUTH WEST LONDON INTEGRATED CARE BO" = "South West London", #"NHS NOTTINGHAM AND NOTTINGHAMSHIRE INTEG" = "Nottingham and Nottinghamshire", #"NHS SUFFOLK AND NORTH EAST ESSEX INTEGRA" = "Suffolk and North East Essex", #"NHS DERBY AND DERBYSHIRE INTEGRATED CARE" = "Derby and Derbyshire", #"NHS COVENTRY AND WARWICKSHIRE INTEGRATED" = "Coventry and Warwickshire", #"NHS LINCOLNSHIRE INTEGRATED CARE BOARD" = "Lincolnshire", #"NHS SURREY HEARTLANDS INTEGRATED CARE BO" = "Surrey Heartlands", #"NHS BEDFORDSHIRE, LUTON AND MILTON KEYNE" = "Bedfordshire, Luton and Milton Keynes", #"NHS BATH AND NORTH EAST SOMERSET, SWINDO" = "Bath and North East Somerset, Swindon and Wiltshire", #"NHS CAMBRIDGESHIRE AND PETERBOROUGH INTE" = "Cambridgeshire and Peterborough", #"NHS HEREFORDSHIRE AND WORCESTERSHIRE INT" = "Herefordshire and Worcestershire", #"NHS BRISTOL, NORTH SOMERSET AND SOUTH GL" = "Bristol, North Somerset and South Gloucestershire", #"NHS DORSET INTEGRATED CARE BOARD" = "Dorset", #"NHS NORTHAMPTONSHIRE INTEGRATED CARE BOA" = "Northamptonshire", #"NHS CORNWALL AND THE ISLES OF SCILLY INT" = "Cornwall and the Isles of Scilly", #"NHS FRIMLEY INTEGRATED CARE BOARD" = "Frimley", #"NHS GLOUCESTERSHIRE INTEGRATED CARE BOAR" = "Gloucestershire", #"NHS SOMERSET INTEGRATED CARE BOARD" = "Somerset", #"NHS SHROPSHIRE, TELFORD AND WREKIN INTEG" = "Shropshire, Telford and Wrekin", #"UNIDENTIFIED" = "Unidentified"],
+				    Short = Table.AddColumn(Kept, "icb_short", each Record.FieldOrDefault(Names, [icb_name], [icb_name]), type text),
+				    Region = Table.AddColumn(Short, "region_label", each Text.Replace(Text.Replace(Text.Proper([regional_office_name]), " And ", " and "), " Of ", " of "), type text)
+				in
+				    Region
+

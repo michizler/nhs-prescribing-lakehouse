@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.5.0/schema.json",
+  "name": "intro",
+  "position": {
+    "x": 24,
+    "y": 62,
+    "z": 2,
+    "height": 34,
+    "width": 1232,
+    "tabOrder": 2
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Every load is compared with totals from NHSBSA's own API. The two gaps below compare this report's totals with those same published totals.",
+                    "textStyle": {
+                      "fontSize": "11pt",
+                      "color": "#425563"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

@@ -10,3 +10,5 @@ data/
 *.csv.gz
 .env
 docs/decisions.md
+**/.pbi/localSettings.json
+**/.pbi/cache.abf

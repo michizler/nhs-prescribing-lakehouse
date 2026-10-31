@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.14.0/schema.json",
+  "name": "note",
+  "position": {
+    "x": 24,
+    "y": 714,
+    "z": 9,
+    "height": 38,
+    "width": 1232,
+    "tabOrder": 9
+  },
+  "visual": {
+    "visualType": "textbox",
+    "objects": {
+      "general": [
+        {
+          "properties": {
+            "paragraphs": [
+              {
+                "textRuns": [
+                  {
+                    "value": "Expected cost is what an ICB would spend at England's average cost per item in each chapter, given its own items in each chapter. It still moves with brands, pack sizes and how long prescriptions last, so this is more like a curious question, not a verdict. I also left prescribers with no ICB out of this page.",
+                    "textStyle": {
+                      "fontSize": "9pt",
+                      "color": "#768692"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "drillFilterOtherVisuals": true
+  }
+}

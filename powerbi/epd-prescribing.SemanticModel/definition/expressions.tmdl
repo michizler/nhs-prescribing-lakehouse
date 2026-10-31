@@ -1,0 +1,12 @@
+/// The Databricks workspace to read from.
+expression DatabricksHost = "adb-7405612595706299.19.azuredatabricks.net" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 3ecd3d4f-4bac-5843-abcb-e39823096ada
+
+	annotation PBI_ResultType = Text
+
+/// The SQL warehouse that serves refreshes.
+expression WarehousePath = "/sql/1.0/warehouses/f0afa37a29472343" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+	lineageTag: 5fd2ea01-78e4-5676-93b7-87fc93183048
+
+	annotation PBI_ResultType = Text
+

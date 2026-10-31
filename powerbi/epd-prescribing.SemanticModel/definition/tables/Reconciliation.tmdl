@@ -1,0 +1,106 @@
+/// Latest result per month and check from ops.reconciliation, which is appended to on every run.
+table Reconciliation
+	lineageTag: 88981a27-3007-5b76-8d70-798925899b38
+
+	/// Checks that passed.
+	measure 'Passed count' = CALCULATE(COUNTROWS(Reconciliation), Reconciliation[passed] = TRUE())
+		formatString: #,##0
+		isHidden
+		lineageTag: 22defdb8-e13b-50bb-a80b-c47ffa3e4384
+
+	/// Checks in the latest run of each month.
+	measure 'Checks run' = COUNTROWS(Reconciliation)
+		formatString: #,##0
+		lineageTag: 9e6a5787-e840-53e5-9f67-2b9b5bfba9bc
+
+	/// Passed out of run, for the card.
+	measure 'Checks passed' = FORMAT(COALESCE([Passed count], 0), "#,##0") & " of " & FORMAT([Checks run], "#,##0")
+		lineageTag: d3e08332-11a9-541c-b902-77d73f47a185
+
+	/// The publisher's items for the months in view.
+	measure 'Published items' = CALCULATE(SUM(Reconciliation[published_value]), Reconciliation[check_code] = "items")
+		formatString: #,##0
+		lineageTag: 102760b8-888b-51da-a437-d0d43f3b0791
+
+	/// The publisher's cost for the months in view.
+	measure 'Published cost' = CALCULATE(SUM(Reconciliation[published_value]), Reconciliation[check_code] = "actual_cost")
+		formatString: "£"#,##0.00
+		lineageTag: 38f98ecf-acd9-50c3-93ad-52c1e3721b45
+
+	column year_month
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: 680ed9a9-4e6f-57d9-b80f-82f2ad123abe
+		summarizeBy: none
+		sourceColumn: year_month
+
+	column check_code
+		dataType: string
+		isHidden
+		lineageTag: 5a467c0d-0aab-5c58-be7e-1a07d2633f1a
+		summarizeBy: none
+		sourceColumn: check
+
+	column passed
+		dataType: boolean
+		isHidden
+		lineageTag: d4186dc3-3d9b-5cf1-ac07-4f3baa03f14f
+		summarizeBy: none
+		sourceColumn: passed
+
+	column published_value
+		dataType: double
+		isHidden
+		lineageTag: 65073175-3248-5c85-abf7-bbebe2a7fd29
+		summarizeBy: none
+		sourceColumn: published_value
+
+	column Check
+		dataType: string
+		lineageTag: a1555421-3df4-53dc-a622-956625cd75dc
+		summarizeBy: none
+		sourceColumn: check_label
+
+	column Published
+		dataType: string
+		lineageTag: 89e87cb1-d08a-5eaf-b122-1a5a585017df
+		summarizeBy: none
+		sourceColumn: published
+
+	column Lakehouse
+		dataType: string
+		lineageTag: 01e685d9-4c22-5130-9fda-2f9831472c9e
+		summarizeBy: none
+		sourceColumn: lakehouse
+
+	column Result
+		dataType: string
+		lineageTag: ec411e83-036a-5c67-9520-86a0d4d2ca10
+		summarizeBy: none
+		sourceColumn: result_label
+
+	column 'Checked at'
+		dataType: dateTime
+		formatString: dd mmm yyyy hh:mm
+		lineageTag: d586dd67-c3dd-578d-8907-cddec08db554
+		summarizeBy: none
+		sourceColumn: checked_at
+
+	partition Reconciliation = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs(DatabricksHost, WarehousePath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]),
+				    Catalog = Source{[Name="epd",Kind="Database"]}[Data],
+				    Schema = Catalog{[Name="ops",Kind="Schema"]}[Data],
+				    Data = Schema{[Name="reconciliation",Kind="Table"]}[Data],
+				    Grouped = Table.Group(Data, {"year_month", "check"}, {{"latest", each Table.Max(_, "checked_at"), type record}}),
+				    Expanded = Table.ExpandRecordColumn(Grouped, "latest", {"published", "lakehouse", "passed", "checked_at"}),
+				    Valued = Table.AddColumn(Expanded, "published_value", each Number.FromText([published], "en-GB"), type number),
+				    Labelled = Table.AddColumn(Valued, "check_label", each if [check] = "rows" then "Rows" else if [check] = "items" then "Items" else if [check] = "actual_cost" then "Actual cost" else if [check] = "orphaned_practice_keys" then "Orphaned practice keys" else [check], type text),
+				    Result = Table.AddColumn(Labelled, "result_label", each if [passed] then "✓ Pass" else "✗ Fail", type text),
+				    Typed = Table.TransformColumnTypes(Result, {{"year_month", Int64.Type}, {"published", type text}, {"lakehouse", type text}, {"passed", type logical}, {"checked_at", type datetime}})
+				in
+				    Typed
+

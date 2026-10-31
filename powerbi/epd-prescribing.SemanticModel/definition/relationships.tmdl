@@ -1,0 +1,16 @@
+relationship prescribing_period
+	fromColumn: Prescribing.year_month
+	toColumn: Period.year_month
+
+relationship prescribing_icb
+	fromColumn: Prescribing.icb_code
+	toColumn: ICB.icb_code
+
+relationship prescribing_chapter
+	fromColumn: Prescribing.bnf_chapter_code
+	toColumn: Chapter.bnf_chapter_code
+
+relationship reconciliation_period
+	fromColumn: Reconciliation.year_month
+	toColumn: Period.year_month
+

@@ -1,0 +1,46 @@
+/// Months loaded, from gold.dim_period.
+table Period
+	lineageTag: 03c9d51d-684b-5978-8509-920e24559437
+
+	column year_month
+		dataType: int64
+		isHidden
+		formatString: 0
+		lineageTag: eab561e5-e809-541b-8497-3270141cb10e
+		summarizeBy: none
+		sourceColumn: year_month
+
+	column period_start
+		dataType: dateTime
+		isHidden
+		formatString: dd/mm/yyyy
+		lineageTag: 20a90cdb-fe83-5a7c-9980-903f31733e5a
+		summarizeBy: none
+		sourceColumn: period_start
+
+	column Month
+		dataType: string
+		lineageTag: a60045a0-8b37-5f02-bdb1-d0864ddb8b26
+		summarizeBy: none
+		sourceColumn: month_label
+		sortByColumn: year_month
+
+	column 'Financial year'
+		dataType: string
+		lineageTag: 21778512-e171-580e-9ea9-28fa63324625
+		summarizeBy: none
+		sourceColumn: financial_year_label
+
+	partition Period = m
+		mode: import
+		source =
+				let
+				    Source = Databricks.Catalogs(DatabricksHost, WarehousePath, [Catalog=null, Database=null, EnableAutomaticProxyDiscovery=null]),
+				    Catalog = Source{[Name="epd",Kind="Database"]}[Data],
+				    Schema = Catalog{[Name="gold",Kind="Schema"]}[Data],
+				    Data = Schema{[Name="dim_period",Kind="Table"]}[Data],
+				    Labelled = Table.AddColumn(Data, "month_label", each Text.Replace(Date.ToText([period_start], [Format="MMM yy", Culture="en-GB"]), " ", "#(00A0)"), type text),
+				    Kept = Table.SelectColumns(Labelled, {"year_month", "period_start", "month_label", "financial_year_label"})
+				in
+				    Kept
+

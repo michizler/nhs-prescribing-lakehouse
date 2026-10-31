@@ -4,7 +4,7 @@ A production-style Azure lakehouse for the **English Prescribing Dataset**, ever
 
 Data Factory lands each new month, Databricks moves it through bronze, silver and gold Delta tables, and every load is reconciled against totals computed by the publisher's own API before it counts as done.
 
-> **Status.** Deployed to Azure. Twelve months, July 2024 to June 2025, have run from the publisher's files through to gold, and each one reconciles exactly. That is 216,230,578 rows, 1,254,528,279 items and £10,347,167,629.82, with no rows quarantined and every fact row's practice key present in the dimension. One month takes about 3 minutes to land and about 29 in the Databricks job. The Power BI report isn't built yet.
+> **Status.** Deployed to Azure. Twelve months, July 2024 to June 2025, have run from the publisher's files through to gold, and each one reconciles exactly. That is 216,230,578 rows, 1,254,528,279 items and £10,347,167,629.82, with no rows quarantined and every fact row's practice key present in the dimension. One month takes about 3 minutes to land and about 29 in the Databricks job. A four-page Power BI report reads from gold, and its totals match the publisher's to the penny.
 
 ## Architecture
 
@@ -53,6 +53,24 @@ Every design decision below came from measuring the live data first, using June 
 
 **Idempotent by month.** Every write replaces exactly the months it was given, using Delta's `replaceWhere`, and Delta refuses a batch that strays outside them. Running a month twice gives the same tables as running it once. Tests prove both.
 
+## The report
+
+A Power BI Project in [powerbi/](powerbi), so the semantic model and every page are text files in Git. It imports gold through a Databricks SQL warehouse, which runs only during a refresh, so viewing the report costs nothing.
+
+![Overview page](docs/images/report-overview.png)
+
+**ICB comparison.** Total cost mostly shows how big an ICB is, and cost per item depends on what it prescribes, so neither says whether an area is expensive. Expected cost does. It is what an ICB would spend at England's average cost per item in each BNF chapter, given its own items in each chapter, and across England it sums exactly to actual cost. Surrey Heartlands sits 18.8% above expected and North East and North Cumbria 12.7% below. In money, Hampshire and Isle of Wight is furthest above at £41 million, and North East and North Cumbria furthest below at £91 million. A gap is a question to ask and not a verdict, because brands, pack sizes and prescription length all still move it, and this lakehouse holds no population data.
+
+![ICB comparison page](docs/images/report-icb-comparison.png)
+
+**Chapter by month.** Each chapter's cost per day against its own average, so months of different lengths compare fairly. Immunological products and vaccines jump 473% in October 2024, and cardiovascular runs more than 20% above its usual level in July and August 2024.
+
+![Chapter by month page](docs/images/report-chapter-by-month.png)
+
+**Data checks.** The latest reconciliation result for every month, and the gap between this report's own totals and the publisher's. All 48 checks pass, and both gaps are zero.
+
+![Data checks page](docs/images/report-data-checks.png)
+
 ## Repository
 
 ```
@@ -61,6 +79,7 @@ src/          the epd_lakehouse package: bronze, silver, gold, scd2, dq rules, r
 jobs/         Databricks task entry points, one per layer
 tests/        pytest on Spark and Delta, with real NHSBSA rows as fixtures
 scripts/      fetch_sample.py pulls a small sample from the API for development
+powerbi/      the Power BI Project: semantic model and report as text files
 databricks.yml  the Databricks Asset Bundle: job, cluster and wheel
 docs/         the runbook
 ```
