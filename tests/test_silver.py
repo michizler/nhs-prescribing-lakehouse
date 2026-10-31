@@ -7,13 +7,18 @@ from decimal import Decimal
 from pyspark.sql import functions as F
 
 from epd_lakehouse import silver
-from epd_lakehouse.bronze import with_ingest_metadata
+from epd_lakehouse.bronze import csv_options, with_ingest_metadata
 from epd_lakehouse.schema import CORRUPT_COLUMN, GRAIN, RAW_COLUMNS
 
 
 def test_every_published_column_is_read(bronze):
     assert [c for c in bronze.columns if c in RAW_COLUMNS] == RAW_COLUMNS
     assert bronze.count() == 36
+
+
+def test_reader_options_are_accepted_by_auto_loader():
+    # Auto Loader only runs on Databricks, where this option fails the stream alongside `rescuedDataColumn`.
+    assert "enforceSchema" not in csv_options()
 
 
 def test_conform_types_and_hierarchy(bronze):

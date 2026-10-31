@@ -47,7 +47,6 @@ module access 'modules/access.bicep' = {
   name: 'access'
   params: {
     storageName: storageName
-    workspaceName: '${prefix}-dbw-${suffix}'
     factoryPrincipalId: factory.outputs.principalId
     accessConnectorName: '${prefix}-dbw-${suffix}-ac'
     accessConnectorPrincipalId: databricks.outputs.accessConnectorPrincipalId

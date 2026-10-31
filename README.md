@@ -4,7 +4,7 @@ A production-style Azure lakehouse for the **English Prescribing Dataset**, ever
 
 Data Factory lands each new month, Databricks moves it through bronze, silver and gold Delta tables, and every load is reconciled against totals computed by the publisher's own API before it counts as done.
 
-> **Status.** Built and tested locally on Spark 4.0 and Delta 4.0 in Docker. Not yet deployed to Azure. The infrastructure, the pipeline and the job are all defined as code and ready to deploy.
+> **Status.** Deployed to Azure. June 2025 has run from the publisher's file through to gold and reconciled exactly: 18,028,356 rows, 103,590,213 items and £862,338,253.30, with no rows quarantined. Landing took about 3 minutes and the Databricks job about 29.
 
 ## Architecture
 
@@ -74,11 +74,11 @@ docker build -f Dockerfile.test -t epd-tests .
 docker run --rm epd-tests
 ```
 
-21 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
+22 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
 
 ## Deploy
 
-See [docs/runbook.md](docs/runbook.md). In short, `az deployment group create` with `infra/main.bicep`, then `databricks bundle deploy`, then redeploy the infrastructure with the job ID so Data Factory can start it.
+See [docs/runbook.md](docs/runbook.md). In short, `az deployment group create` with `infra/main.bicep`, then add Data Factory's identity to the workspace and run `databricks bundle deploy`, then redeploy the infrastructure with the job ID so Data Factory can start it.
 
 ## Cost
 

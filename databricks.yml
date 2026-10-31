@@ -9,6 +9,8 @@ variables:
     default: epd
   storage_account:
     description: Storage account name from the infra deployment output `storageAccount`
+  data_factory_app_id:
+    description: Application ID of the Data Factory managed identity, which starts the job
 
 artifacts:
   epd_lakehouse:
@@ -23,6 +25,9 @@ resources:
       description: Bronze to gold for the English Prescribing Dataset, then reconciliation against NHSBSA totals.
       max_concurrent_runs: 1            # two runs writing the same months would race
       timeout_seconds: 14400
+      permissions:
+        - service_principal_name: ${var.data_factory_app_id}
+          level: CAN_MANAGE_RUN         # Data Factory can start this job and read its status, and nothing else
       email_notifications:
         on_failure: ["${workspace.current_user.userName}"]
 

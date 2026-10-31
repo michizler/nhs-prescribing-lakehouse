@@ -12,8 +12,9 @@ FILE_PERIOD_PATTERN = r"epd_(\d{6})\.csv"
 
 
 def csv_options() -> dict[str, str]:
-    """Reader options shared by the batch reader and Auto Loader. Quoted fields can contain commas and quotes."""
-    return {"header": "true", "quote": '"', "escape": '"', "mode": "PERMISSIVE", "enforceSchema": "true"}
+    """Reader options shared by the batch reader and Auto Loader. Quoted fields can contain commas and quotes.
+    No `enforceSchema`, because Auto Loader rejects it alongside `rescuedDataColumn`."""
+    return {"header": "true", "quote": '"', "escape": '"', "mode": "PERMISSIVE"}
 
 
 def read_batch(spark: SparkSession, path: str) -> DataFrame:

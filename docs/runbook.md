@@ -47,11 +47,17 @@ Keep the outputs. `storageAccount`, `databricksUrl` and `accessConnectorId` are 
 
 **3. The Databricks job.**
 
+`databricks.yml` names no workspace, so save the login under the profile name `DEFAULT`. Data Factory's identity must be added to the workspace before the job can name it. Its Azure role alone doesn't let it in.
+
 ```
 databricks auth login --host <databricksUrl>
-databricks bundle deploy --var="storage_account=<storageAccount>"
-databricks bundle summary
+$appId = az ad sp show --id <dataFactoryPrincipalId> --query appId -o tsv
+databricks service-principals create --application-id $appId --display-name <dataFactoryName>
+databricks bundle deploy --var="storage_account=<storageAccount>" --var="data_factory_app_id=$appId"
+databricks bundle summary --var="storage_account=<storageAccount>" --var="data_factory_app_id=$appId"
 ```
+
+The new identity has no entitlements, and Databricks refuses all API calls without one. In the workspace, open Settings, then Identity and access, then Service principals, pick the identity and tick Workspace access. This only lets it call the API. Its rights still come from the job's permission list.
 
 Note the job ID from the summary.
 
