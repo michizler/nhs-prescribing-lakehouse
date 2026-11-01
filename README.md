@@ -4,7 +4,7 @@ A production-style Azure lakehouse for the **English Prescribing Dataset**, ever
 
 Data Factory lands each new month, Databricks moves it through bronze, silver and gold Delta tables, and every load is reconciled against totals computed by the publisher's own API before it counts as done.
 
-> **Status.** Deployed to Azure. Twelve months, July 2024 to June 2025, have run from the publisher's files through to gold, and each one reconciles exactly. That is 216,230,578 rows, 1,254,528,279 items and £10,347,167,629.82, with no rows quarantined and every fact row's practice key present in the dimension. One month takes about 3 minutes to land and about 29 in the Databricks job. A four-page Power BI report reads from gold, and its totals match the publisher's to the penny.
+> **Status.** Deployed to Azure. Twelve months, July 2024 to June 2025, have run from the publisher's files through to gold, and each one reconciles exactly. That is 216,230,578 rows, 1,254,528,279 items and £10,347,167,629.82, with no rows quarantined and every fact row's practice key present in the dimension. One month takes about 3 minutes to land and about 29 in the Databricks job. A four-page Power BI report reads from gold, and its totals agree with the publisher's.
 
 ## Architecture
 
@@ -32,9 +32,9 @@ flowchart LR
 
 Every design decision below came from measuring the live data first, using June 2025 through the publisher's SQL API.
 
-- **18,028,356 rows**, 9,249 prescribers, 21,430 products, 43 ICBs, 103.6 million items, £862.3 million.
-- **The grain is not practice and product.** In Bolton, 118,777 lines cover only 64,067 practice and product pairs, because the same medicine appears once for each pack size. A line is unique on month, commissioner, practice, product and quantity per item.
-- **26 lines repeat that grain nationally, all from a placeholder prescriber**, code `-`, "UNIDENTIFIED DOCTORS". They are kept, so totals still reconcile, mapped to an "unknown" practice, and summed to the grain in gold.
+- **18,028,356 rows**, 9,249 prescribers, 21,430 products, 42 ICBs, 103.6 million items, £862.3 million.
+- **One row is not one practice and one product.** In Bolton, 118,777 rows cover only 64,067 practice and product pairs, because the same medicine gets a separate row for each pack size. A row only becomes unique when you combine the month, commissioner, practice, product and quantity per item.
+- **26 rows are not unique even on all five of those details, all from a placeholder prescriber**, code `-`, "UNIDENTIFIED DOCTORS". They are kept, so totals still agree with the publisher, listed under an "unknown" practice and added together in gold.
 - **BNF codes are not all 15 characters.** The 1.8 million lines for appliances, dressings and stoma products, chapters 20 to 23, use 11-character codes. That is 10% of rows and £125 million. A small sample of one area missed this, so a run through a real slice of the published file caught it before the first load.
 - **Every name field is cut at 40 characters**, so "NHS LANCASHIRE AND SOUTH CUMBRIA INTEGRA" is how one ICB is published. Silver flags these rows rather than guessing the rest.
 - **17,854 lines are flagged unidentified**, and their prescribers have no address.
@@ -49,7 +49,7 @@ Every design decision below came from measuring the live data first, using June 
 
 **Gold.** The practice dimension is rebuilt from the full silver history on every run with the gaps-and-islands pattern, which gives the same versions and the same surrogate keys every time, so a rerun or a corrected month can't leave it half-updated. The fact joins each line to the practice version that was valid in its month. Keys come from each version's start month, so loading a month older than those already in gold moves them, and that load rewrites every month of the fact. Newer months rewrite nothing else.
 
-**Reconciliation.** For every month, bronze row count and gold items and cost are compared with the publisher's own totals. Rows and items must match exactly and cost to the penny. Totals can't see a broken join, so every fact row's practice key must also exist in the dimension. Results go to `ops.reconciliation`, and any mismatch fails the job.
+**Reconciliation.** For every month, bronze row count and gold items and cost are compared with the publisher's own totals. Rows, items and cost must all be in agreement. Totals can't see a broken join, so every fact row's practice key must also exist in the dimension. Results go to `ops.reconciliation`, and any mismatch fails the job.
 
 **Idempotent by month.** Every write replaces exactly the months it was given, using Delta's `replaceWhere`, and Delta refuses a batch that strays outside them. Running a month twice gives the same tables as running it once. Tests prove both.
 
@@ -93,7 +93,7 @@ docker build -f Dockerfile.test -t epd-tests .
 docker run --rm epd-tests
 ```
 
-24 tests cover the silver rules against real and deliberately broken rows, the grain, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
+24 tests cover the silver rules against real and deliberately broken rows, what makes a row unique, the placeholder prescriber, type 2 history and its stable keys, point-in-time fact joins, totals surviving every layer, per-month Delta writes and reconciliation.
 
 ## Deploy
 
